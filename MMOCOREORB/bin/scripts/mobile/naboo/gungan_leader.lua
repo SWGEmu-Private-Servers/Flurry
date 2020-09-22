@@ -21,14 +21,14 @@ gungan_leader = Creature:new {
 	boneType = "",
 	boneAmount = 0,
 	milk = 0,
-	tamingChance = 0,
+	tamingChance = 0.0,
 	ferocity = 0,
 	pvpBitmask = ATTACKABLE + AGGRESSIVE + ENEMY,
 	creatureBitmask = PACK + KILLER,
 	optionsBitmask = AIENABLED,
 	diet = HERBIVORE,
 
-	templates = {"object/mobile/gungan_male.iff"},
+	templates = {"object/mobile/gungan_s02_male.iff"},
 	lootGroups = {
 		{
 			groups = {

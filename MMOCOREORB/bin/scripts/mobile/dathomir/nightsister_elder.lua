@@ -4,10 +4,10 @@ nightsister_elder = Creature:new {
 	randomNameTag = true,
 	socialGroup = "nightsister",
 	faction = "nightsister",
-	level = 278,
+	level = 300,
 	chanceHit = 27.25,
-	damageMin = 1520,
-	damageMax = 2750,
+	damageMin = 1820,
+	damageMax = 3150,
 	baseXp = 26654,
 	baseHAM = 321000,
 	baseHAMmax = 392000,
@@ -20,7 +20,7 @@ nightsister_elder = Creature:new {
 	boneType = "",
 	boneAmount = 0,
 	milk = 0,
-	tamingChance = 0,
+	tamingChance = 0.0,
 	ferocity = 0,
 	pvpBitmask = AGGRESSIVE + ATTACKABLE + ENEMY,
 	creatureBitmask = PACK + KILLER + HEALER,
@@ -28,21 +28,73 @@ nightsister_elder = Creature:new {
 	diet = HERBIVORE,
 
 	templates = {"object/mobile/dressed_dathomir_nightsister_elder.iff"},
-	lootGroups = {
+	lootGroups = {		
 		{
 			groups = {
-				{group = "power_crystals", chance = 800000},
-				{group = "nightsister_common", chance = 2200000},
-				{group = "junk", chance = 1000000},
-				{group = "armor_attachments", chance = 500000},
-				{group = "clothing_attachments", chance = 500000},
-				{group = "pistols", chance = 800000},
-				{group = "rifles", chance = 800000},
-				{group = "carbines", chance = 900000},
-				{group = "melee_weapons", chance = 2000000},
-				{group = "wearables_scarce", chance = 500000}
-			}
-		}
+				{group = "power_crystals", chance = 10000000},
+			},
+			lootChance = 5000000
+		},
+		{
+			groups = {
+				{group = "nge_all", chance = 10000000},
+			},
+			lootChance = 5000000
+		},
+		{
+			groups = {
+				{group = "color_crystals", chance = 10000000},
+			},
+			lootChance = 5000000
+		},
+		{
+			groups = {
+				{group = "nightsister_common", chance = 10000000},
+			},
+			lootChance = 5000000
+		},
+		{
+			groups = {
+				{group = "armor_attachments", chance = 10000000},
+			},
+			lootChance = 5000000
+		},
+		{
+			groups = {
+				{group = "clothing_attachments", chance = 10000000},
+			},
+			lootChance = 5000000
+		},
+		{
+			groups = {
+				{group = "wearables_scarce", chance = 10000000},
+			},
+			lootChance = 5000000
+		},	
+		{
+			groups = {
+				{group = "jedi_comp_group", chance = 10000000},
+			},
+			lootChance = 200000
+		},
+		{
+			groups = {
+				{group = "tierone", chance = 1500000},
+				{group = "tiertwo", chance = 3500000},
+				{group = "tierthree", chance = 2500000},
+				{group = "tierdiamond", chance = 2500000},
+			},
+			lootChance = 4000000
+		},
+		{
+			groups = {
+				{group = "tierone", chance = 1500000},
+				{group = "tiertwo", chance = 3500000},
+				{group = "tierthree", chance = 2500000},
+				{group = "tierdiamond", chance = 2500000},
+			},
+			lootChance = 4000000
+		},
 	},
 	weapons = {"mixed_force_weapons"},
 	conversationTemplate = "",

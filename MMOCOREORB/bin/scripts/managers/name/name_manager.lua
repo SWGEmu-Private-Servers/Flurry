@@ -33,6 +33,7 @@ reservedNames = {
 	{ "biatch", DECLINED_PROFANE },
 	{ "bitch", DECLINED_PROFANE },
 	{ "boob", DECLINED_PROFANE },
+	{ "butt", DECLINED_PROFANE },
 	{ "christ", DECLINED_PROFANE },
 	{ "clit", DECLINED_PROFANE },
 	{ "cock", DECLINED_PROFANE },
@@ -631,5 +632,8 @@ reservedNames = {
 	{ "guild", DECLINED_RESERVED },
 	{ "tip", DECLINED_RESERVED },
 	{ "citizens", DECLINED_RESERVED },
-	{ "self", DECLINED_RESERVED }
+	{ "self", DECLINED_RESERVED },
+	{ "tox", DECLINED_RESERVED }, --admin name  
+	{ "syg", DECLINED_RESERVED },  --admin name
+	{ "sig", DECLINED_RESERVED } --admin name  
 }

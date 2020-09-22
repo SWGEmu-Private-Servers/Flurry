@@ -20,14 +20,14 @@ gungan_bomber = Creature:new {
 	boneType = "",
 	boneAmount = 0,
 	milk = 0,
-	tamingChance = 0,
+	tamingChance = 0.0,
 	ferocity = 0,
 	pvpBitmask = ATTACKABLE,
 	creatureBitmask = PACK,
 	optionsBitmask = AIENABLED,
 	diet = HERBIVORE,
 
-	templates = {"object/mobile/gungan_male.iff"},
+	templates = {"object/mobile/shared_gungan_m_hood_greeter.iff"},
 	lootGroups = {
 		{
 			groups = {

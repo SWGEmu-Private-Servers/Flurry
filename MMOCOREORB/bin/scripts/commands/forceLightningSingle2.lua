@@ -44,34 +44,75 @@
 ForceLightningSingle2Command = {
 	name = "forcelightningsingle2",
 
-	minDamage = 600,
-	maxDamage = 1200,
-	speed = 4.0,
-	forceCost = 150,
+	minDamage = 1000,
+	maxDamage = 1500,
+	speed = 2.0,
+	forceCost = 75,
 	visMod = 25,
 	accuracySkillMod = "forcelightning_accuracy",
 
 	stateEffects = {
 		StateEffect(
-			STUN_EFFECT,
-			{},
-			{},
-			{ "jedi_state_defense" },
-			30,
-			0,
-			10
-		)
+		BLIND_EFFECT, 
+
+		{}, 
+
+		{ "blind_defense" }, 
+
+		{ "jedi_state_defense", "resistance_states" },
+
+		75, 
+
+		0, 
+
+		60 
+
+	  ),
+
+	  StateEffect( 
+		DIZZY_EFFECT, 
+		{}, 
+		{ "dizzy_defense" }, 
+		{ "jedi_state_defense", "resistance_states" }, 
+		75, 
+		0, 
+		30 
+	  ),
+	  StateEffect( 
+		STUN_EFFECT, 
+	{}, 
+		{ "stun_defense" }, 
+		{ "jedi_state_defense", "resistance_states" }, 
+		76, 
+		0, 
+		60
+	)
 	},
 
 	animation = "force_lightning_1_particle_level_3",
 	animType = GENERATE_INTENSITY,
-
 	combatSpam = "forcelightningsingle2",
 
+		dotEffects = {
+	  DotEffect( 
+		ONFIRE, 
+		{"resistance_fire", "fire_resist"},
+		HEALTH,
+		true,
+		0,
+		100,
+		100, 
+		60,
+		10,
+		2
+	  )
+	},
+	
+	
 	poolsToDamage = RANDOM_ATTRIBUTE,
 
 	forceAttack = true,
-	damageType = ELECTRICITY_DAMAGE,
+	damageType = LIGHTSABER_DAMAGE,
 
 	frsLightMinDamageModifier = 5,
 	frsLightMaxDamageModifier = 10,
