@@ -35,7 +35,6 @@
 
 #include "server/zone/objects/building/components/GCWBaseContainerComponent.h"
 #include "server/zone/objects/building/components/EnclaveContainerComponent.h"
-#include "server/zone/objects/transaction/TransactionLog.h"
 
 void BuildingObjectImplementation::initializeTransientMembers() {
 	StructureObjectImplementation::initializeTransientMembers();
@@ -147,10 +146,10 @@ void BuildingObjectImplementation::sendContainerObjectsTo(SceneObject* player, b
 }
 
 void BuildingObjectImplementation::sendTo(SceneObject* player, bool doClose, bool forceLoadContainer) {
-	debug("building sendto..");
+	//info("building sendto..", true);
 
 	if (!isStaticBuilding()) { // send Baselines etc..
-		debug("sending building object create");
+		//info("sending building object create");
 
 		SceneObjectImplementation::sendTo(player, doClose, forceLoadContainer);
 	} //else { // just send the objects that are in the building, without the cells because they are static in the client
@@ -324,23 +323,6 @@ void BuildingObjectImplementation::notifyRemoveFromZone() {
 		}
 	}
 
-	for (int i = 0; i < childCreatureObjects.size(); ++i) {
-		ManagedReference<CreatureObject*> child = childCreatureObjects.get(i);
-
-		if (child == nullptr)
-			continue;
-
-		Locker locker(child);
-
-		AiAgent* ai = child->asAiAgent();
-
-		if (ai != nullptr) {
-			ai->setRespawnTimer(0);
-		}
-
-		child->destroyObjectFromWorld(true);
-	}
-
 	childObjects.removeAll();
 	childCreatureObjects.removeAll();
 
@@ -355,7 +337,7 @@ void BuildingObjectImplementation::notifyRemoveFromZone() {
 
 void BuildingObjectImplementation::sendDestroyTo(SceneObject* player) {
 	if (!isStaticBuilding()) {
-		debug("sending building object destroy");
+		info("sending building object destroy");
 
 		SceneObjectImplementation::sendDestroyTo(player);
 	}
@@ -363,7 +345,7 @@ void BuildingObjectImplementation::sendDestroyTo(SceneObject* player) {
 
 void BuildingObjectImplementation::sendBaselinesTo(SceneObject* player) {
 	//send buios here
-	debug("sending building baselines");
+	//info("sending building baselines",true);
 
 	BaseMessage* buio3 = new TangibleObjectMessage3(asBuildingObject());
 	player->sendMessage(buio3);
@@ -419,7 +401,7 @@ bool BuildingObjectImplementation::isAllowedEntry(CreatureObject* player) {
 }
 
 void BuildingObjectImplementation::notifyObjectInsertedToZone(SceneObject* object) {
-	debug("BuildingObjectImplementation::notifyInsertToZone");
+	//info("BuildingObjectImplementation::notifyInsertToZone", true);
 
 	auto closeObjectsVector = getCloseObjects();
 	Vector<QuadTreeEntry*> closeObjects(closeObjectsVector->size(), 10);
@@ -902,8 +884,8 @@ void BuildingObjectImplementation::onExit(CreatureObject* player, uint64 parenti
 }
 
 uint32 BuildingObjectImplementation::getMaximumNumberOfPlayerItems() {
-	if (isCivicStructure() )
-		return 250;
+	//if (isCivicStructure() )
+		//return 250;
 
 	SharedStructureObjectTemplate* ssot = dynamic_cast<SharedStructureObjectTemplate*> (templateObject.get());
 
@@ -919,7 +901,7 @@ uint32 BuildingObjectImplementation::getMaximumNumberOfPlayerItems() {
 
 	auto maxItems = MAXPLAYERITEMS;
 
-	return Math::min(maxItems, lots * 100);
+	return Math::min(maxItems, lots * 200);
 }
 
 int BuildingObjectImplementation::notifyObjectInsertedToChild(SceneObject* object, SceneObject* child, SceneObject* oldParent) {
@@ -954,6 +936,64 @@ int BuildingObjectImplementation::notifyObjectInsertedToChild(SceneObject* objec
 				CellObject* cell = static_cast<CellObject*>(child);
 
 				if (cell != nullptr) {
+					if (child->getCloseObjects() != nullptr)
+					{
+						if (!child->getCloseObjects()->contains(object))
+						{
+							child->addInRangeObject(object, false);
+							object->sendTo(child, true, false);
+							//info("In Range",true);
+						}
+					}
+					else
+						{
+							child->notifyInsert(object);
+							//info("Notify Insert",true);
+						}
+					if (object->getCloseObjects() != nullptr)
+					{
+						if (!object->getCloseObjects()->contains(child))
+						{
+							object->addInRangeObject(child, false);
+							child->sendTo(object, true, false);
+							//info("In Range",true);
+						}
+					}
+					else
+						{
+							object->notifyInsert(child);
+							//info("Notify Insert",true);
+						}
+					SceneObject* building = static_cast<SceneObject*>(asBuildingObject());
+
+					if (building->getCloseObjects() != nullptr)
+					{
+						if (!building->getCloseObjects()->contains(object))
+						{
+							building->addInRangeObject(object, false);
+							object->sendTo(building, true, false);
+							//info("In Range",true);
+						}
+					}
+					else
+						{
+							building->notifyInsert(object);
+							//info("Notify Insert",true);
+						}
+					if (object->getCloseObjects() != nullptr)
+					{
+						if (!object->getCloseObjects()->contains(building))
+						{
+							object->addInRangeObject(building, false);
+							building->sendTo(object, true, false);
+							//info("In Range",true);
+						}
+					}
+					else
+						{
+							object->notifyInsert(building);
+							//info("Notify Insert",true);
+						}
 					for (int j = 0; j < cell->getContainerObjectsSize(); ++j) {
 						ManagedReference<SceneObject*> cobj = cell->getContainerObject(j);
 
@@ -1166,22 +1206,16 @@ void BuildingObjectImplementation::payAccessFee(CreatureObject* player) {
 		return;
 	}
 
-	ManagedReference<CreatureObject*> owner = getOwnerCreatureObject();
-
-	TransactionLog trx(player, owner, TrxCode::ACCESSFEE, accessFee, true);
-	trx.setAutoCommit(false);
-
 	player->subtractCashCredits(accessFee);
+
+	ManagedReference<CreatureObject*> owner = getOwnerCreatureObject();
 
 	if (owner != nullptr) {
 		Locker clocker(owner, player);
 		owner->addBankCredits(accessFee, true);
 	} else {
 		error("Unable to pay access fee credits to owner");
-		trx.errorMessage() << "Unable to pay access fee to owner";
 	}
-
-	trx.commit();
 
 	if (paidAccessList.contains(player->getObjectID()))
 		paidAccessList.drop(player->getObjectID());
@@ -1291,7 +1325,7 @@ void BuildingObjectImplementation::createChildObjects() {
 		GCWManager* gcwMan = thisZone->getGCWManager();
 
 		for (int i = 0; i < serverTemplate->getChildObjectsSize();i++) {
-			const ChildObject* child = serverTemplate->getChildObject(i);
+			ChildObject* child = serverTemplate->getChildObject(i);
 
 			if (child == nullptr)
 				continue;

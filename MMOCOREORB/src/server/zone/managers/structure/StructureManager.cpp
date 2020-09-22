@@ -45,7 +45,6 @@
 #include "server/zone/objects/intangible/PetControlDevice.h"
 #include "server/zone/managers/creature/PetManager.h"
 #include "server/zone/objects/installation/harvester/HarvesterObject.h"
-#include "server/zone/objects/transaction/TransactionLog.h"
 
 namespace StorageManagerNamespace {
 	 int indexCallback(DB *secondary, const DBT *key, const DBT *data, DBT *result) {
@@ -209,7 +208,7 @@ int StructureManager::getStructureFootprint(SharedStructureObjectTemplate* objec
 	float centerX = (structureFootprint->getCenterX() * 8) + 4;
 	float centerY = (structureFootprint->getCenterY() * 8) + 4;
 
-	debug() << "getStructureFootprint centerX:" << centerX << " centerY:" << centerY;
+	//info ("centerX:" + String::valueOf(centerX) + " centerY:" + String::valueOf(centerY), true);
 
 	float topLeftX = -centerX;
 	float topLeftY = (structureFootprint->getRowSize() * 8 ) - centerY;
@@ -255,8 +254,8 @@ int StructureManager::getStructureFootprint(SharedStructureObjectTemplate* objec
 	w1 = Math::max(resultTop.getX(), resultBottom.getX());
 	l1 = Math::max(resultTop.getZ(), resultBottom.getZ());
 
-	debug() << "objectTemplate:" << objectTemplate->getFullTemplateString() << " :" << *structureFootprint
-		<< "angle:" << angle << " w0:" << w0 << " l0:" << l0 << " w1:" << w1 << " l1:" << l1;
+	//info("objectTemplate:" + objectTemplate->getFullTemplateString() + " :" + structureFootprint->toString(), true);
+	//info("angle:" + String::valueOf(angle) + " w0:" + String::valueOf(w0) + " l0:" + String::valueOf(l0) + " w1:" + String::valueOf(w1) + " l1:" + String::valueOf(l1), true);
 
 	return 0;
 }
@@ -321,8 +320,8 @@ int StructureManager::placeStructureFromDeed(CreatureObject* creature, Structure
 
 		BoundaryRectangle placingFootprint(x0, y0, x1, y1);
 
-		debug() << "placing center x:" << x << " y:" << y
-			<< "placingFootprint x0:" << x0 << " y0:" << y0 << " x1:" << x1 << " y1:" << y1;
+		//info("placing center x:" + String::valueOf(x) + " y:" + String::valueOf(y), true);
+		//info("placingFootprint x0:" + String::valueOf(x0) + " y0:" + String::valueOf(y0) + " x1:" + String::valueOf(x1) + " y1:" + String::valueOf(y1), true);
 
 		for (int i = 0; i < inRangeObjects.size(); ++i) {
 			SceneObject* scene = inRangeObjects.get(i).castTo<SceneObject*>();
@@ -345,7 +344,7 @@ int StructureManager::placeStructureFromDeed(CreatureObject* creature, Structure
 
 			BoundaryRectangle rect(xx0, yy0, xx1, yy1);
 
-			debug() << "existing footprint xx0:" << xx0 << " yy0:" << yy0 << " xx1:" << xx1 << " yy1:" << yy1;
+			//info("existing footprint xx0:" + String::valueOf(xx0) + " yy0:" + String::valueOf(yy0) + " xx1:" + String::valueOf(xx1) + " yy1:" + String::valueOf(yy1), true);
 
 			// check 4 points of the current rect
 			if (rect.containsPoint(x0, y0)
@@ -353,7 +352,7 @@ int StructureManager::placeStructureFromDeed(CreatureObject* creature, Structure
 					|| rect.containsPoint(x1, y0)
 					|| rect.containsPoint(x1, y1) ) {
 
-				debug() << "existing footprint contains placing point";
+				//info("existing footprint contains placing point", true);
 
 				creature->sendSystemMessage("@player_structure:no_room"); //there is no room to place the structure here..
 
@@ -365,7 +364,7 @@ int StructureManager::placeStructureFromDeed(CreatureObject* creature, Structure
 					|| placingFootprint.containsPoint(xx1, yy0)
 					|| placingFootprint.containsPoint(xx1, yy1)
 					|| (xx0 == x0 && yy0 == y0 && xx1 == x1 && yy1 == y1)) {
-				debug() << "placing footprint contains existing point";
+				//info("placing footprint contains existing point", true);
 
 				creature->sendSystemMessage("@player_structure:no_room"); //there is no room to place the structure here.
 
@@ -551,8 +550,6 @@ StructureObject* StructureManager::placeStructure(CreatureObject* creature,
 	structureObject->initializePosition(x, z, y);
 	structureObject->rotate(angle);
 
-	TransactionLog trx(TrxCode::STRUCTUREDEED, creature, structureObject);
-
 	zone->transferObject(structureObject, -1, true);
 
 	structureObject->createChildObjects();
@@ -608,7 +605,7 @@ int StructureManager::declareResidence(CreatureObject* player, StructureObject* 
 	PlayerObject* ghost = player->getPlayerObject();
 
 	if (!isCityHall && !player->checkCooldownRecovery("declare_residence") && !ghost->isPrivileged()) {
-		const Time* timeremaining = player->getCooldownTime("declare_residence");
+		Time* timeremaining = player->getCooldownTime("declare_residence");
 		StringIdChatParameter params("player_structure", "change_residence_time"); //You cannot change residence for %NO hours.
 		params.setTO(String::valueOf(ceil(timeremaining->miliDifference() / -3600000.f)));
 
@@ -733,8 +730,6 @@ int StructureManager::redeedStructure(CreatureObject* creature) {
 	int maint = structureObject->getSurplusMaintenance();
 	int redeedCost = structureObject->getRedeedCost();
 
-	TransactionLog trx(creature, TrxCode::STRUCTUREDEED, structureObject);
-
 	if (deed != nullptr && structureObject->isRedeedable()) {
 		Locker _lock(deed, structureObject);
 
@@ -752,11 +747,9 @@ int StructureManager::redeedStructure(CreatureObject* creature) {
 			if(isSelfPoweredHarvester) {
 				//This installation can not be destroyed because there is no room for the Self Powered Harvester Kit in your inventory.
 				creature->sendSystemMessage("@player_structure:inventory_full_selfpowered");
-				trx.abort() << "@player_structure:inventory_full_selfpowered";
 			} else {
 				//This installation can not be redeeded because your inventory does not have room to put the deed.
 				creature->sendSystemMessage("@player_structure:inventory_full");
-				trx.abort() << "@player_structure:inventory_full";
 			}
 
 			creature->sendSystemMessage("@player_structure:deed_reclaimed_failed"); //Structure destroy and deed reclaimed FAILED!
@@ -768,15 +761,11 @@ int StructureManager::redeedStructure(CreatureObject* creature) {
 				Reference<SceneObject*> rewardSceno = server->createObject(STRING_HASHCODE("object/tangible/veteran_reward/harvester.iff"), 1);
 				if( rewardSceno == nullptr ){
 					creature->sendSystemMessage("@player_structure:deed_reclaimed_failed"); //Structure destroy and deed reclaimed FAILED!
-					trx.abort() << "failed to createObject veteran_reward/harvester";
 					return session->cancelSession();
 				}
 
-				TransactionLog trx(TrxCode::STRUCTUREDEED, creature, rewardSceno);
-
 				// Transfer to player
 				if( !inventory->transferObject(rewardSceno, -1, false, true) ){ // Allow overflow
-					trx.abort() << "Failed to reclaim deed";
 					creature->sendSystemMessage("@player_structure:deed_reclaimed_failed"); //Structure destroy and deed reclaimed FAILED!
 					rewardSceno->destroyObjectFromDatabase(true);
 					return session->cancelSession();
@@ -788,10 +777,6 @@ int StructureManager::redeedStructure(CreatureObject* creature) {
 				creature->sendSystemMessage("@player_structure:selfpowered");
 			}
 
-			TransactionLog trxDeed(structureObject, creature, deed, TrxCode::STRUCTUREDEED);
-			trxDeed.addState("structureOriginalObjectID", structureObject->getObjectID());
-			trxDeed.groupWith(trx);
-
 			deed->setSurplusMaintenance(maint - redeedCost);
 			deed->setSurplusPower(structureObject->getSurplusPower());
 
@@ -799,10 +784,7 @@ int StructureManager::redeedStructure(CreatureObject* creature) {
 
 			destroyStructure(structureObject);
 
-			if (!inventory->transferObject(deed, -1, true)) {
-				trx.abort() << "failed to transfer deed to player inventory";
-			}
-
+			inventory->transferObject(deed, -1, true);
 			inventory->broadcastObject(deed, true);
 			creature->sendSystemMessage("@player_structure:deed_reclaimed"); //Structure destroyed and deed reclaimed.
 		}
@@ -1011,8 +993,10 @@ void StructureManager::reportStructureStatus(CreatureObject* creature,
 
 		status->addMenuItem(
 				"@player_structure:items_in_building_prompt "
-						+ String::valueOf(
-								building->getCurrentNumberOfPlayerItems())); //Number of Items in Building:
+				//Number of Items in Building. Max item limit Added. [1/1000]:
+				+ String::valueOf(building->getCurrentNumberOfPlayerItems())
+				+ "/"
+				+ String::valueOf(building->getMaximumNumberOfPlayerItems()));
 
 #if ENABLE_STRUCTURE_JSON_EXPORT
 		if (creature->hasSkill("admin_base")) {
@@ -1157,7 +1141,9 @@ void StructureManager::promptPayUncondemnMaintenance(CreatureObject* creature, S
 }
 
 void StructureManager::promptPayMaintenance(StructureObject* structure, CreatureObject* creature, SceneObject* terminal) {
-	int availableCredits = creature->getCashCredits();
+	int bank = creature->getBankCredits();
+	int cash = creature->getCashCredits();
+	int availableCredits = bank + cash;
 
 	if (availableCredits <= 0) {
 		creature->sendSystemMessage("@player_structure:no_money"); //You do not have any money to pay maintenance.
@@ -1326,12 +1312,8 @@ void StructureManager::payMaintenance(StructureObject* structure,
 		return;
 	}
 
+	int bank = creature->getBankCredits();
 	int cash = creature->getCashCredits();
-
-	if (cash < amount) {
-		creature->sendSystemMessage("@player_structure:insufficient_funds"); //You have insufficient funds to make this deposit.
-		return;
-	}
 
 	StringIdChatParameter params("base_player", "prose_pay_success"); //You successfully make a payment of %DI credits to %TT.
 	params.setTT(structure->getDisplayedName());
@@ -1339,11 +1321,20 @@ void StructureManager::payMaintenance(StructureObject* structure,
 
 	creature->sendSystemMessage(params);
 
-	{
-		TransactionLog trx(creature, structure, TrxCode::STRUCTUREMAINTANENCE, amount, true);
-		creature->subtractCashCredits(amount);
-		structure->addMaintenance(amount);
+	if (cash < amount) {
+		int diff = amount - cash;
+
+		if (diff > bank){
+			creature->sendSystemMessage("@player_structure:insufficient_funds"); //You have insufficient funds to make this deposit.
+			return;
+		}
+
+		creature->subtractCashCredits(cash); //Take all from cash, since they didn't have enough to cover.
+		creature->subtractBankCredits(diff); //Take the rest from the bank.
+	} else {
+		creature->subtractCashCredits(amount); //Take all of the payment from cash.
 	}
+	structure->addMaintenance(amount);
 
 	PlayerObject* ghost = creature->getPlayerObject();
 
@@ -1379,11 +1370,8 @@ void StructureManager::withdrawMaintenance(StructureObject* structure, CreatureO
 
 	creature->sendSystemMessage(params);
 
-	{
-		TransactionLog trx(structure, creature, TrxCode::STRUCTUREMAINTANENCE, amount, true);
-		creature->addCashCredits(amount);
-		structure->subtractMaintenance(amount);
-	}
+	creature->addCashCredits(amount);
+	structure->subtractMaintenance(amount);
 }
 
 bool StructureManager::isInStructureFootprint(StructureObject* structure, float positionX, float positionY, int extraFootprintMargin){

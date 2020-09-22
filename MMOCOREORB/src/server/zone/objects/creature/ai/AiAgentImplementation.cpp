@@ -365,7 +365,7 @@ void AiAgentImplementation::setupAttackMaps() {
 		defaultAttackMap = new CreatureAttackMap();
 
 		for (int i = 0; i < fullAttackMap->size(); i++) {
-			const CombatQueueCommand* attack = cast<const CombatQueueCommand*>(objectController->getQueueCommand(fullAttackMap->getCommand(i)));
+			CombatQueueCommand* attack = cast<CombatQueueCommand*>(objectController->getQueueCommand(fullAttackMap->getCommand(i)));
 			if (attack == nullptr)
 				continue;
 
@@ -883,7 +883,7 @@ void AiAgentImplementation::selectSpecialAttack(int attackNum) {
 				return;
 			}
 
-			const QueueCommand* queueCommand = getZoneServer()->getObjectController()->getQueueCommand(nextActionCRC);
+			QueueCommand* queueCommand = getZoneServer()->getObjectController()->getQueueCommand(nextActionCRC);
 			ManagedReference<SceneObject*> followCopy = getFollowObject().get();
 			if (queueCommand == nullptr || followCopy == nullptr
 					|| (queueCommand->getMaxRange() > 0 && !followCopy->isInRange(asAiAgent(), queueCommand->getMaxRange() + getTemplateRadius() + followCopy->getTemplateRadius()))
@@ -1129,9 +1129,9 @@ void AiAgentImplementation::selectDefaultWeapon() {
 
 bool AiAgentImplementation::validateStateAttack(CreatureObject* target, unsigned int actionCRC) {
 	ManagedReference<ObjectController*> objectController = getZoneServer()->getObjectController();
-	const CombatQueueCommand* queueCommand = cast<const CombatQueueCommand*>(objectController->getQueueCommand(actionCRC));
+	CombatQueueCommand* queueCommand = cast<CombatQueueCommand*>(objectController->getQueueCommand(actionCRC));
 
-	const VectorMap<uint8, StateEffect>* effects = queueCommand->getStateEffects();
+	VectorMap<uint8, StateEffect>* effects = queueCommand->getStateEffects();
 
 	if (effects->size() == 0) {
 		return true;
@@ -1271,7 +1271,10 @@ void AiAgentImplementation::setDefender(SceneObject* defender) {
 }
 
 void AiAgentImplementation::queueDizzyFallEvent() {
-	if (isNonPlayerCreatureObject())
+       if (!isNonPlayerCreatureObject())
+		CreatureObjectImplementation::queueDizzyFallEvent();
+	else
+       if (isNonPlayerCreatureObject())
 		CreatureObjectImplementation::queueDizzyFallEvent();
 }
 
@@ -1369,7 +1372,7 @@ void AiAgentImplementation::respawn(Zone* zone, int level) {
 	CreatureManager* creatureManager = zone->getCreatureManager();
 
 	if (npcTemplate != nullptr && creatureManager != nullptr && isCreature()) {
-		int chance = 2000;
+		int chance = 500;
 		int babiesSpawned = 0;
 
 		ManagedReference<SceneObject*> home = homeObject.get();
@@ -2302,6 +2305,7 @@ bool AiAgentImplementation::isScentMasked(CreatureObject* target) {
 	// Step 1. Check for break
 	bool success = false;
 	int camoSkill = effectiveTarget->getSkillMod("mask_scent");
+	camoSkill += 25;
 	int creatureLevel = getLevel();
 
 	int mod = 100;
@@ -2313,6 +2317,7 @@ bool AiAgentImplementation::isScentMasked(CreatureObject* target) {
 		mod -= 35;
 
 	success = System::random(100) <= mod - (float)creatureLevel / ((float)camoSkill / 100.0f) / 20.f;
+	effectiveTarget->sendSystemMessage("Your maskScent skill is: " + String::valueOf(camoSkill) + " and you rolled a: " + String::valueOf(success));
 
 	if (success)
 		camouflagedObjects.put(effectiveTargetID); // add to award
@@ -2803,10 +2808,6 @@ bool AiAgentImplementation::isAggressiveTo(CreatureObject* target) {
 	uint32 targetFaction = target->getFaction();
 	PlayerObject* ghost = target->getPlayerObject();
 
-	if (ghost != nullptr && ghost->hasCrackdownTefTowards(getFaction())) {
-		return true;
-	}
-
 	// check the GCW factions if both entities have one
 	if (getFaction() != 0 && targetFaction != 0) {
 
@@ -2862,7 +2863,8 @@ void AiAgentImplementation::sendDefaultConversationTo(SceneObject* player) {
 void AiAgentImplementation::selectConversationOption(int option, SceneObject* obj) {
 }
 
-bool AiAgentImplementation::isEventMob() const {
+bool AiAgentImplementation::isEventMob() {
+
 	if (getDisplayedName().contains(" (event)"))
 		return true;
 
@@ -3225,7 +3227,7 @@ bool AiAgentImplementation::isAttackableBy(TangibleObject* object) {
 	if (isPet()) {
 		ManagedReference<PetControlDevice*> pcd = getControlDevice().get().castTo<PetControlDevice*>();
 		if (pcd != nullptr && pcd->getPetType() == PetManager::FACTIONPET && object->isNeutral()) {
-			return false;
+			return true;
 		}
 
 		ManagedReference<CreatureObject*> owner = getLinkedCreature().get();
@@ -3265,7 +3267,7 @@ bool AiAgentImplementation::isAttackableBy(CreatureObject* object) {
 	if (isPet()) {
 		ManagedReference<PetControlDevice*> pcd = getControlDevice().get().castTo<PetControlDevice*>();
 		if (pcd != nullptr && pcd->getPetType() == PetManager::FACTIONPET && object->isNeutral()) {
-			return false;
+			return true;
 		}
 
 		ManagedReference<CreatureObject*> owner = getLinkedCreature().get();
@@ -3280,7 +3282,7 @@ bool AiAgentImplementation::isAttackableBy(CreatureObject* object) {
 	if (object->isPet() || object->isVehicleObject()) {
 		ManagedReference<PetControlDevice*> pcd = object->getControlDevice().get().castTo<PetControlDevice*>();
 		if (pcd != nullptr && pcd->getPetType() == PetManager::FACTIONPET && isNeutral()) {
-			return false;
+			return true;
 		}
 
 		ManagedReference<CreatureObject*> owner = object->getLinkedCreature().get();
@@ -3294,13 +3296,6 @@ bool AiAgentImplementation::isAttackableBy(CreatureObject* object) {
 
 	if (pvpStatusBitmask == 0) {
 		return false;
-	}
-
-	if (object->isPlayerCreature()) {
-		Reference<PlayerObject*> ghost = object->getPlayerObject();
-		if (ghost != nullptr && ghost->hasCrackdownTefTowards(getFaction())) {
-			return true;
-		}
 	}
 
 	unsigned int targetFaction = object->getFaction();
@@ -3444,8 +3439,4 @@ void AiAgentImplementation::clearCreatureBit(uint32 option) {
 	if (creatureBitmask & option) {
 		creatureBitmask = creatureBitmask & ~option;
 	}
-}
-
-bool AiAgentImplementation::isPet() const {
-	return (getControlDevice() != nullptr);
 }

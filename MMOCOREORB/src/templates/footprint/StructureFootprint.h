@@ -99,10 +99,6 @@ public:
 		return str.toString();
 	}
 
-	String toStringData() const {
-		return toString();
-	}
-
 	inline float getRowSize() const {
 		return rowSize;
 	}

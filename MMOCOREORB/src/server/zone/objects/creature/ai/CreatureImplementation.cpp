@@ -334,12 +334,16 @@ float CreatureImplementation::getChanceToTame(CreatureObject* player) {
 	int ferocity = getFerocity();
 	float tamingChance = getTame() * 100.0f;
 
-	if (isVicious())
+	if (isVicious()) {
 		skill += player->getSkillMod("tame_aggro");
-	else
+		skill += 15; // Aggro tame bonus
+	}
+	else {
 		skill += player->getSkillMod("tame_non_aggro");
+		skill += 5; // Non-Aggro tame bonus
+	}
 
-	float chanceToTame = tamingChance + skill - (cl + ferocity);
+ 	float chanceToTame = tamingChance + skill - (cl + ferocity);
 
 	return chanceToTame;
 }
@@ -391,7 +395,7 @@ bool CreatureImplementation::canCollectDna(CreatureObject* player) {
 	if (_this.getReferenceUnsafeStaticCast()->isNonPlayerCreatureObject()) {
 		return false;
 	}
-	if(!player->isInRange(_this.getReferenceUnsafeStaticCast(), 16.0f) || player->isInCombat() || player->isDead() || player->isIncapacitated() ){
+	if(!player->isInRange(_this.getReferenceUnsafeStaticCast(), 25.0f) || player->isInCombat() || player->isDead() || player->isIncapacitated() ){
 		return false;
 	}
 

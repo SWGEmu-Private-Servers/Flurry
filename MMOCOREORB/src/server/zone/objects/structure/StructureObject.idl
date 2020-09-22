@@ -106,7 +106,7 @@ class StructureObject extends TangibleObject {
 		super.createChildObjects();
 	}
 
-	@read
+	@dirty
 	public abstract int getReceiverFlags() {
 		return CloseObjectsVector.STRUCTURETYPE | super.getReceiverFlags();
 	}
@@ -150,6 +150,7 @@ class StructureObject extends TangibleObject {
 	public native abstract void updateStructureStatus();
 
 	@prelocked
+	@dirty
 	@read
 	public native string getDebugStructureStatus();
 
@@ -490,7 +491,7 @@ class StructureObject extends TangibleObject {
 
 	@read
 	public boolean hasNavmesh() {
-		return navArea;
+		return navArea != null;
 	}
 
 	@preLocked

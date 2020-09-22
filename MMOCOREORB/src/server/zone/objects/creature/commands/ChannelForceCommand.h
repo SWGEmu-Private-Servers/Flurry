@@ -43,6 +43,10 @@ public:
 		if (playerObject->getForcePower() >= playerObject->getForcePowerMax())
 			return GENERALERROR;
 
+		int enhSkills = playerObject->numSpecificSkills(creature, "force_discipline_enhancements_");
+                float enhMod = enhSkills * .056;
+                forceBonus = forceBonus * (1 + enhMod);
+
 		// To keep it from going over max...
 		if ((playerObject->getForcePowerMax() - playerObject->getForcePower()) < forceBonus)
 			forceBonus = ((playerObject->getForcePowerMax() - playerObject->getForcePower()) / 10) * 10;
@@ -101,7 +105,7 @@ public:
 			if (channelBuff != nullptr)
 				channelBuff->activateRegenTick();
 		}
-
+		creature->playEffect("clienteffect/pl_force_channel_self.cef", "");
 		return SUCCESS;
 	}
 

@@ -258,6 +258,11 @@ class WeaponObject extends TangibleObject {
 		idealAccuracy = value;
 	}
 
+	@dirty
+	public void setArmorPiercing(int value) {
+                armorPiercing = value;
+        }
+
 	@read
 	public int getArmorPiercing() {
 		return armorPiercing;
@@ -355,6 +360,11 @@ class WeaponObject extends TangibleObject {
 	}
 
 	@read
+	public string getDeconstructionTemplate() {
+		return weaponTemplate.getDeconstructionTemplate();
+	}
+
+	@read
 	public int getNumberOfDots() {
 		return dotType.size();
 	}
@@ -417,7 +427,7 @@ class WeaponObject extends TangibleObject {
 		dotUses.elementAt(index) = u;
 	}
 
-	@read
+	@dirty
 	public native string getWeaponType();
 
 	@read
@@ -532,12 +542,11 @@ class WeaponObject extends TangibleObject {
 
 	@read
 	public boolean hasPowerup() {
-		return powerupObject;
+		return powerupObject != null;
 	}
 
 	public native boolean applyPowerup(CreatureObject player, PowerupObject pup);
 
-	@reference
 	public native PowerupObject removePowerup();
 
 	public native void decreasePowerupUses(CreatureObject player);

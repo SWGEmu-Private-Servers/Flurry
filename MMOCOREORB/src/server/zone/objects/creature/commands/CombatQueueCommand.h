@@ -25,6 +25,7 @@
 #include "server/zone/packets/object/CombatSpam.h"
 #include "QueueCommand.h"
 #include "server/zone/objects/player/FactionStatus.h"
+#include "server/zone/managers/visibility/VisibilityManager.h"
 
 class CombatQueueCommand : public QueueCommand {
 protected:
@@ -181,10 +182,9 @@ public:
 
 				if (ghost->isAFK())
 					return GENERALERROR;
-
 				ManagedReference<TangibleObject*> targetTano = targetObject.castTo<TangibleObject*>();
-
-				if (targetTano != nullptr && creature->getFaction() != 0 && targetTano->getFaction() != 0 && targetTano->getFaction() != creature->getFaction() && creature->getFactionStatus() != FactionStatus::OVERT) {
+				//Comment out field faction change
+				/*if (targetTano != nullptr && creature->getFaction() != 0 && targetTano->getFaction() != 0 && targetTano->getFaction() != creature->getFaction() && creature->getFactionStatus() != FactionStatus::OVERT) {
 					if (targetTano->isCreatureObject()) {
 						ManagedReference<CreatureObject*> targetCreature = targetObject.castTo<CreatureObject*>();
 
@@ -209,7 +209,7 @@ public:
 						else if ((targetTano->getPvpStatusBitmask() & CreatureFlag::OVERT))
 							ghost->doFieldFactionChange(FactionStatus::OVERT);
 					}
-				}
+				}*/
 			}
 		}
 
@@ -281,6 +281,20 @@ public:
 		// only clear aiming states if command was successful
 		creature->removeStateBuff(CreatureState::AIMING);
 		creature->removeBuff(STRING_HASHCODE("steadyaim"));
+
+		//Give visibility
+		if (creature->isPlayerCreature()){
+			PlayerObject* visGhost = creature->getPlayerObject().get();
+			if (visGhost->isJedi()){
+				WeaponObject* visWeap = creature->getWeapon();
+				if (visWeap->isJediWeapon()){
+					VisibilityManager::instance()->increaseVisibility(creature, 25);
+					//Jedi Attackable
+					//visGhost->updateLastJediAttackableTimestamp();
+				}
+
+			}
+		}
 
 		return SUCCESS;
 	}
@@ -498,8 +512,7 @@ public:
 				return "creature_attack" + intensity;
 		}
 
-		debug() << "Generated Attack Animation- " << buffer;
-
+		//info("Generated Attack Animation- " + buffer.toString(), true);
 		return buffer.toString();
 	}
 
@@ -521,13 +534,12 @@ public:
 
 			return anim;
 		}
-
-		debug() << "Generated Attack Animation- " << anim;
-
+		//info("Generated Attack Animation- " + anim, true);
 		return anim;
 	}
 
 	virtual String getAnimation(TangibleObject* attacker, TangibleObject* defender, WeaponObject* weapon, uint8 hitLocation, int damage) const {
+
 		if (animation.isEmpty())
 			return getDefaultAttackAnimation(attacker, weapon, hitLocation, damage);
 
@@ -546,12 +558,12 @@ public:
 		return poolsToDamage;
 	}
 
-	inline const VectorMap<uint8, StateEffect>* getStateEffects() const {
-		return &stateEffects;
+	inline VectorMap<uint8, StateEffect>* getStateEffects() const {
+		return &(const_cast<CombatQueueCommand*>(this)->stateEffects);
 	}
 
-	inline const Vector<DotEffect>* getDotEffects() const {
-		return &dotEffects;
+	inline Vector<DotEffect>* getDotEffects() const {
+		return &(const_cast<CombatQueueCommand*>(this)->dotEffects);
 	}
 
 	void setAnimationString(const String& anim) {
@@ -622,11 +634,11 @@ public:
 		this->accuracySkillMod = acc;
 	}
 
-	bool hasCombatSpam() const {
+	bool hasCombatSpam() {
 		return !combatSpam.isEmpty();
 	}
 
-	bool isCombatCommand() const {
+	bool isCombatCommand() {
 		return true;
 	}
 
@@ -678,7 +690,7 @@ public:
 				defender->setPosture(CreaturePosture::KNOCKEDDOWN, false, false);
 
 			defender->updateKnockdownRecovery();
-			defender->updatePostureChangeDelay(5000);
+			defender->updatePostureChangeDelay(2500);
 			defender->removeBuff(STRING_HASHCODE("burstrun"));
 			defender->removeBuff(STRING_HASHCODE("retreat"));
 			defender->sendSystemMessage("@cbt_spam:posture_knocked_down");

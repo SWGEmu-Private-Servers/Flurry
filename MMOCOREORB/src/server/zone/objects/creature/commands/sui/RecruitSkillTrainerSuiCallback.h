@@ -156,6 +156,12 @@ public:
 				break;
 
 		case 32: trainerTemplatePath = "trainer_weaponsmith";
+				break;
+				
+		case 33: trainerTemplatePath = "trainer_spy";
+				break;
+				
+		case 34: trainerTemplatePath = "trainer_meleebountyhunter";
 
 		}
 

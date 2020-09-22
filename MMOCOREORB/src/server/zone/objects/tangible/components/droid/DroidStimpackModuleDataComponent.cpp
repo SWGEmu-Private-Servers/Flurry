@@ -11,7 +11,6 @@
 #include "server/zone/objects/creature/sui/LoadStimpackSuiCallback.h"
 #include "server/zone/objects/player/sui/listbox/SuiListBox.h"
 #include "server/zone/objects/player/PlayerObject.h"
-#include "server/zone/objects/intangible/PetControlDevice.h"
 
 DroidStimpackModuleDataComponent::DroidStimpackModuleDataComponent() {
 	setLoggingName("DroidStimpackModule");
@@ -25,7 +24,7 @@ DroidStimpackModuleDataComponent::~DroidStimpackModuleDataComponent() {
 
 }
 
-String DroidStimpackModuleDataComponent::getModuleName() const {
+String DroidStimpackModuleDataComponent::getModuleName() {
 	return String("stimpack_module");
 }
 
@@ -72,7 +71,7 @@ void DroidStimpackModuleDataComponent::fillAttributeList(AttributeListMessage* a
 	alm->insertAttribute("stimpack_power", power);
 }
 
-String DroidStimpackModuleDataComponent::toString() const {
+String DroidStimpackModuleDataComponent::toString() {
 	return BaseDroidModuleComponent::toString();
 }
 
@@ -209,9 +208,7 @@ void DroidStimpackModuleDataComponent::onStore() {
  */
 void DroidStimpackModuleDataComponent::fillObjectMenuResponse(SceneObject* droidObject, ObjectMenuResponse* menuResponse, CreatureObject* player) {
 	menuResponse->addRadialMenuItem(REQUEST_STIMPACK, 3, "@pet/droid_modules:request_stimpack" );
-
-	if (player != nullptr && player->hasSkill("science_medic_ability_04"))
-		menuResponse->addRadialMenuItemToRadialID(REQUEST_STIMPACK, LOAD_STIMPACK, 3, "@pet/droid_modules:load_stimpack" );
+	menuResponse->addRadialMenuItemToRadialID(REQUEST_STIMPACK, LOAD_STIMPACK, 3, "@pet/droid_modules:load_stimpack" );
 }
 
 void DroidStimpackModuleDataComponent::initialize(DroidObject* droid) {
@@ -222,14 +219,14 @@ void DroidStimpackModuleDataComponent::initialize(DroidObject* droid) {
 		info("droidComponent was null");
 		return;
 	}
-
+	
 	//This will instantiate the crafted_components slotted container and satchel if they do not exist
 	ManagedReference<SceneObject*> satchel = droidComponent->getCraftedComponentsSatchel();
 	if (satchel != nullptr) {
 		satchel->setContainerVolumeLimit(capacity);
 	}
 
-
+	
 }
 
 int DroidStimpackModuleDataComponent::handleObjectMenuSelect(CreatureObject* player, byte selectedID, PetControlDevice* controller) {
@@ -239,10 +236,10 @@ int DroidStimpackModuleDataComponent::handleObjectMenuSelect(CreatureObject* pla
 		player->sendSystemMessage("@pet/droid_modules:stimpack_error");
 		return 0;
 	}
-
+	
 	if (selectedID == LOAD_STIMPACK) {
 		Locker crossLoker(droid, player);
-
+		
 		ManagedReference<SceneObject*> inventory = player->getSlottedObject("inventory");
 		if (inventory == nullptr) {
 			player->sendSystemMessage("@pet/droid_modules:no_stimpacks");
@@ -263,7 +260,7 @@ int DroidStimpackModuleDataComponent::handleObjectMenuSelect(CreatureObject* pla
 			if (pharma->isStimPack()) {
 				StimPack* stim = cast<StimPack*>(pharma);
 
-				if (stim->isClassA()) {
+				if (stim->isClassA() || stim->isClassB() || stim->isClassC() || stim->isClassD() || stim->isClassE()) {
 					foundStims += 1;
 				}
 			}
@@ -326,7 +323,7 @@ void DroidStimpackModuleDataComponent::sendLoadUI(CreatureObject* player) {
 		if (pharma->isStimPack()) {
 			StimPack* stim = cast<StimPack*>(pharma);
 
-			if (stim->isClassA()) {
+			if (stim->isClassA() || stim->isClassB() || stim->isClassC() || stim->isClassD() || stim->isClassE()) {
 				String name;
 
 				if (stim->getCustomObjectName().isEmpty()) {
@@ -387,10 +384,6 @@ void DroidStimpackModuleDataComponent::handleInsertStimpack(CreatureObject* play
 	if (player == nullptr)
 		return;
 
-	if (!player->hasSkill("science_medic_ability_04")) {
-		return;
-	}
-
 	ManagedReference<DroidObject*> droid = getDroidObject();
 	if (droid == nullptr) {
 		return;
@@ -401,7 +394,7 @@ void DroidStimpackModuleDataComponent::handleInsertStimpack(CreatureObject* play
 		return;
 	}
 
-	if (!pack->isClassA()) {
+	if (!pack->isClassA() || !pack->isClassB() || !pack->isClassC() || !pack->isClassD() || !pack->isClassE()) {
 		player->sendSystemMessage("@pet/droid_modules:invalid_stimpack");
 		return;
 	}

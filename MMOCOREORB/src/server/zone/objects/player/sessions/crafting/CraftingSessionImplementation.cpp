@@ -28,7 +28,6 @@
 
 #include "templates/customization/AssetCustomizationManagerTemplate.h"
 #include "templates/params/RangedIntCustomizationVariable.h"
-#include "server/zone/objects/transaction/TransactionLog.h"
 
 
 int CraftingSessionImplementation::initializeSession(CraftingTool* tool, CraftingStation* station) {
@@ -155,11 +154,6 @@ int CraftingSessionImplementation::cancelSession() {
 	return clearSession();
 }
 
-int CraftingSessionImplementation::cancelSessionCommand() {
-	closeCraftingWindow(0, false);
-	return cancelSession();
-}
-
 int CraftingSessionImplementation::clearSession() {
 	Locker slocker(_this.getReferenceUnsafeStaticCast());
 
@@ -220,30 +214,25 @@ int CraftingSessionImplementation::clearSession() {
 	return 0;
 }
 
-void CraftingSessionImplementation::closeCraftingWindow(int clientCounter, bool wasCraftSuccess) {
+void CraftingSessionImplementation::closeCraftingWindow(int clientCounter) {
 	ManagedReference<CreatureObject*> crafter = this->crafter.get();
 	ManagedReference<PlayerObject*> crafterGhost = this->crafterGhost.get();
-	ObjectControllerMessage* objMsg = nullptr;
 
-	//These two packets deal with the hopper
-	if(wasCraftSuccess) {
-			objMsg = new ObjectControllerMessage(
-					crafter->getObjectID(), 0x1B, 0x010C);
-			objMsg->insertInt(0x10A);
-			objMsg->insertInt(1);
-			objMsg->insertByte(clientCounter);
+	ObjectControllerMessage* objMsg = new ObjectControllerMessage(
+			crafter->getObjectID(), 0x1B, 0x010C);
+	objMsg->insertInt(0x10A);
+	objMsg->insertInt(1);
+	objMsg->insertByte(clientCounter);
 
-			crafter->sendMessage(objMsg);
+	crafter->sendMessage(objMsg);
 
-			objMsg = new ObjectControllerMessage(crafter->getObjectID(), 0x1B, 0x010C);
-			objMsg->insertInt(0x10A);
-			objMsg->insertInt(0);
-			objMsg->insertByte(clientCounter);
+	objMsg = new ObjectControllerMessage(crafter->getObjectID(), 0x1B, 0x010C);
+	objMsg->insertInt(0x10A);
+	objMsg->insertInt(0);
+	objMsg->insertByte(clientCounter);
 
-			crafter->sendMessage(objMsg);
-	}
+	crafter->sendMessage(objMsg);
 
-	//The actual window close command
 	objMsg = new ObjectControllerMessage(crafter->getObjectID(), 0x1B, 0x01C2);
 	objMsg->insertByte(clientCounter);
 
@@ -276,7 +265,7 @@ void CraftingSessionImplementation::selectDraftSchematic(int index) {
 
 	if (index >= currentSchematicList.size()) {
 		crafter->sendSystemMessage("Invalid Schematic Index");
-		closeCraftingWindow(0, false);
+		closeCraftingWindow(1);
 		cancelSession();
 		return;
 	}
@@ -285,7 +274,7 @@ void CraftingSessionImplementation::selectDraftSchematic(int index) {
 
 	if (draftschematic == nullptr) {
 		crafter->sendSystemMessage("@ui_craft:err_no_draft_schematic");
-		closeCraftingWindow(0, false);
+		closeCraftingWindow(1);
 		cancelSession();
 		return;
 	}
@@ -305,7 +294,7 @@ void CraftingSessionImplementation::selectDraftSchematic(int index) {
 
 			if (prototype == nullptr) {
 				crafter->sendSystemMessage("@ui_craft:err_no_prototype");
-				closeCraftingWindow(0, false);
+				closeCraftingWindow(1);
 				cancelSession();
 				return;
 			}
@@ -326,7 +315,7 @@ void CraftingSessionImplementation::selectDraftSchematic(int index) {
 		}
 	} else {
 		crafter->sendSystemMessage("@ui_craft:err_no_crafting_tool");
-		closeCraftingWindow(0, false);
+		closeCraftingWindow(1);
 		cancelSession();
 	}
 }
@@ -347,17 +336,14 @@ bool CraftingSessionImplementation::createManufactureSchematic(DraftSchematic* d
 	manufactureSchematic =
 			 (draftschematic->createManufactureSchematic(craftingTool)).castTo<ManufactureSchematic*>();
 
-	auto schematic = manufactureSchematic.get();
-
-	if (schematic == nullptr) {
+	if (manufactureSchematic.get() == nullptr) {
 		crafter->sendSystemMessage("@ui_craft:err_no_manf_schematic");
-		closeCraftingWindow(0, false);
+		closeCraftingWindow(1);
 		cancelSession();
 		return false;
 	}
 
-	TransactionLog trx(crafter, craftingTool, schematic, TrxCode::CRAFTINGSESSION);
-	craftingTool->transferObject(schematic, 0x4, true);
+	craftingTool->transferObject(manufactureSchematic.get(), 0x4, true);
 	//manufactureSchematic->sendTo(crafter, true);
 
 	if (crafterGhost != nullptr && crafterGhost->getDebug()) {
@@ -384,7 +370,7 @@ bool CraftingSessionImplementation::createPrototypeObject(DraftSchematic* drafts
 
 	if (strongPrototype == nullptr) {
 		crafter->sendSystemMessage("@ui_craft:err_no_prototype");
-		closeCraftingWindow(0, false);
+		closeCraftingWindow(1);
 		cancelSession();
 		return false;
 	}
@@ -393,7 +379,6 @@ bool CraftingSessionImplementation::createPrototypeObject(DraftSchematic* drafts
 
 	strongPrototype->createChildObjects();
 
-	TransactionLog trx(crafter, craftingTool, strongPrototype, TrxCode::CRAFTINGSESSION);
 	craftingTool->transferObject(strongPrototype, -1, false);
 	strongPrototype->sendTo(crafter, true);
 
@@ -485,11 +470,6 @@ void CraftingSessionImplementation::addIngredient(TangibleObject* tano, int slot
 	}
 
 	Locker locker(tano);
-
-	if (tano->getRootParent() == NULL) {
-		sendSlotMessage(clientCounter, IngredientSlot::INVALIDINGREDIENT);
-		return;
-	}
 
 	/// Check if item is on the player, but not in a crafting tool
 	/// Or if the item is in a crafting station to prevent some duping
@@ -651,7 +631,7 @@ void CraftingSessionImplementation::initialAssembly(int clientCounter) {
 	manufactureSchematic->setCrafter(crafter);
 
 	String expskill = draftSchematic->getExperimentationSkill();
-	experimentationPointsTotal = int(crafter->getSkillMod(expskill) / 10);
+	experimentationPointsTotal = int((crafter->getSkillMod(expskill) + crafter->getSkillMod("force_experimentation")) / 10);
 	experimentationPointsUsed = 0;
 
 	// Calculate exp failure for red bars
@@ -1201,20 +1181,20 @@ void CraftingSessionImplementation::createPrototype(int clientCounter, bool crea
 	if (manufactureSchematic->isAssembled()
 			&& !manufactureSchematic->isCompleted()) {
 
-		closeCraftingWindow(clientCounter, true);
+		closeCraftingWindow(clientCounter);
 
 		String xpType = manufactureSchematic->getDraftSchematic()->getXpType();
 		int xp = manufactureSchematic->getDraftSchematic()->getXpAmount();
 
 		if (createItem) {
 
-			startCreationTasks(manufactureSchematic->getComplexity() * 2, false);
+			startCreationTasks(1, false); // 1 Second tool countdown to make sure it works with the client.
 
 		} else {
 
 			// This is for practicing
-			startCreationTasks(manufactureSchematic->getComplexity() * 2, true);
-			xp = round(xp * 1.05f);
+			startCreationTasks(1, true); // 1 Second tool countdown to make sure it works with the client.
+ 			xp *= 1.75f; // Default 1.05f for 5%
 		}
 
 		Reference<PlayerManager*> playerManager = crafter->getZoneServer()->getPlayerManager();
@@ -1224,7 +1204,7 @@ void CraftingSessionImplementation::createPrototype(int clientCounter, bool crea
 
 	} else {
 
-		closeCraftingWindow(clientCounter, false);
+		closeCraftingWindow(clientCounter);
 
 		sendSlotMessage(clientCounter, IngredientSlot::WEIRDFAILEDMESSAGE);
 	}
@@ -1309,13 +1289,12 @@ void CraftingSessionImplementation::createManufactureSchematic(int clientCounter
 		manufactureSchematic->setPersistent(2);
 		prototype->setPersistent(2);
 
-		TransactionLog trx(crafter, datapad, manufactureSchematic, TrxCode::CRAFTINGSESSION);
 		datapad->transferObject(manufactureSchematic, -1, true);
 		manufactureSchematic->setPrototype(prototype);
 
 	} else {
 
-		closeCraftingWindow(clientCounter, false);
+		closeCraftingWindow(clientCounter);
 
 		sendSlotMessage(clientCounter, IngredientSlot::WEIRDFAILEDMESSAGE);
 	}
@@ -1405,11 +1384,6 @@ bool CraftingSessionImplementation::checkPrototype() {
 
 		if (weapon->hasPowerup())
 			return false;
-	}
-
-	if (prototype->getContainerObjectsSize() > 0) {
-		error() << "checkPrototype(): prototype->getContainerObjectsSize() > 0, prototype: " << *prototype;
-		return false;
 	}
 
 	return true;
